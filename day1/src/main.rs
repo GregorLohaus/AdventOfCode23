@@ -29,55 +29,37 @@ fn main() -> io::Result<()> {
         let cloned = sum.clone();
         let handle = thread::spawn(move || {
             let mut locked = cloned.lock().unwrap();
-            let re = Regex::new(r"(\d|one|two|three|four|five|six|seven|eight|nine)").unwrap();
-            let mut digits = re.find_iter(l.as_str());
+            let re = Regex::new(r"(\d|one|three|four|five|six|seven)").unwrap();
+            let re2 = Regex::new(r"eight").unwrap();
+            let re3 = Regex::new(r"(nine|two)").unwrap();
+            let mut matches: Vec<regex::Match> = re.find_iter(l.as_str()).collect();
+            let mut matches2: Vec<regex::Match> = re2.find_iter(l.as_str()).collect();
+            let mut matches3: Vec<regex::Match> = re3.find_iter(l.as_str()).collect();
+            matches.append(&mut matches2);
+            matches.append(&mut matches3);
+            matches.sort_by_cached_key(|k| k.start());
             let mut num = String::new();
-            match digits.next() {
-                Some(d1) => {
-                    let d1_str: &str;
-                    if d1.len() > 1 {
-                        match str_num_to_num_str().get(d1.as_str()) {
-                            Some(str) => d1_str = str,
-                            None => {
-                                dbg!("str_num_to_num_str did not return anythinh");
-                                panic!()
-                            }
-                        }
-                    } else {
-                        d1_str = d1.as_str();
-                    }
-                    match digits.last() {
-                        Some(d2) => {
-                            let d2_str: &str;
-                            if d2.len() > 1 {
-                                match str_num_to_num_str().get(d2.as_str()) {
-                                    Some(str) => d2_str = str,
-                                    None => {
-                                        dbg!("str_num_to_num_str did not return anythinh");
-                                        panic!()
-                                    }
-                                }
-                            } else {
-                                d2_str = d2.as_str();
-                            }
-                            num = num + d1_str + d2_str;
-                            dbg!(l.clone(), num.clone(), d1_str, d2_str);
-                        }
-                        None => {
-                            dbg!(l.clone(), num.clone(), d1_str, d1_str);
-                            num = num + d1_str + d1_str;
-                        }
-                    }
-                }
-                None => panic!(),
-            }
-            if let Ok(int) = num.parse::<i32>() {
-                *locked += int;
-                dbg!(*locked);
+            let d1_str: &str;
+            let d2_str: &str;
+            if matches[0].len() > 1 {
+                d1_str = str_num_to_num_str().get(matches[0].as_str()).unwrap();
             } else {
-                dbg!("could not parse", num);
-                panic!()
+                d1_str = matches[0].as_str()
             }
+            if matches.len() < 2 {
+                d2_str = d1_str;
+            } else {
+                if matches[matches.len() - 1].len() > 1 {
+                    d2_str = str_num_to_num_str()
+                        .get(matches[matches.len() - 1].as_str())
+                        .unwrap();
+                } else {
+                    d2_str = matches[matches.len() - 1].as_str();
+                }
+            }
+            num = num + d1_str + d2_str;
+            // dbg!(l.as_str(), d1_str, d2_str, num.clone());
+            *locked += num.parse::<i32>().unwrap();
         });
         handles.push(handle)
     }
